@@ -1,8 +1,19 @@
 title,description
-"Advanced Data Structures","Advanced Data Structures
+Model Context Protocol (MCP) and Python SDK,"Model Context Protocol (MCP) and Python SDK
 
-Disjoint Set/Union-Find
-Fenwick Tree (Binary Indexed Tree)
-Suffix Array/Tree
-Bloom Filter
-LRU Cache"
+Introduction to MCP: What is the Model Context Protocol?
+MCP Architecture: Hosts, Clients, and Servers
+Setting Up Your MCP Development Environment
+Building Your First MCP Server with Python
+Working with MCP Resources
+Creating and Using MCP Tools
+MCP Security and Authentication
+Real-World MCP Application: Building a GitHub PR Reviewer"
+Introduction to MCP: What is the Model Context Protocol?,"An introduction to what MCP is, why it was created, how it compares to traditional API integrations, and the key benefits for developers."
+"MCP Architecture: Hosts, Clients, and Servers","A detailed explanation of the MCP architecture, including hosts, clients, servers, transport methods, and the communication flow between components."
+Setting Up Your MCP Development Environment,"Step-by-step instructions for setting up a Python development environment for MCP, including installing required tools like uv package manager and the MCP Python SDK."
+Building Your First MCP Server with Python,"A hands-on guide to creating your first functional MCP server using FastMCP, with code examples and explanations of basic server configuration."
+Working with MCP Resources,"A comprehensive look at how to define, expose, and work with MCP resources, including resource URIs, patterns, and handling resource updates."
+Creating and Using MCP Tools,"Practical instructions for implementing MCP tools using Python decorators, input validation, and handling both synchronous and asynchronous operations."
+MCP Security and Authentication,"Best practices for securing your MCP servers, implementing authentication, and ensuring data privacy when connecting LLMs to external data sources."
+Real-World MCP Application: Building a GitHub PR Reviewer,A complete project tutorial that ties together all the previous concepts to build a practical GitHub Pull Request reviewer using MCP to connect Claude with GitHub and Notion.

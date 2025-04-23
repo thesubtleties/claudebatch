@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "learningGenerator": {
+      "command": "wsl",
+      "args": [
+        "docker",
+        "run",
+        "-i",
+        "--rm",
+        "--env-file",
+        "/path/to/your/folder/.env",
+        "-v",
+        "/path/to/your/folder:/data",
+        "mcp/learning-generator"
+      ]
+    }
+  }
+}

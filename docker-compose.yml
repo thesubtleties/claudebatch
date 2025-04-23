@@ -1,0 +1,16 @@
+services:
+  learning-generator:
+    build: .
+    image: mcp/learning-generator
+    stdin_open: true # Required for stdio transport
+    tty: true
+    volumes:
+      - ${CLAUDE_BATCH_DIR}:/data
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - MODEL=${MODEL:-claude-3-opus-20240229}
+      - MAX_TOKENS=${MAX_TOKENS:-4000}
+      - TEMPERATURE=${TEMPERATURE:-0.2}
+      # Add any other environment variables your application needs
+    env_file:
+      - .env # Docker Compose will load variables from this file

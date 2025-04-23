@@ -1,3 +1,12 @@
-need beginner bible to {title}. could you make that for me? going in my DS&A Bible portion of my notes i have from my programming/bootcamp stuff. to be shared with class mates as well, so tone should not be directed to me individually but something anyone could use.
+I need a beginner's guide to {title} for my bootcamp graduates. This will be shared as part of a learning resource collection on the Model Context Protocol (MCP) and Python SDK. 
 
-{description}
+The content should include:
+- Clear explanations of concepts
+- Practical code examples using Python 3.10+
+- Best practices and common pitfalls
+- Comparisons to familiar web development concepts when possible
+- Step-by-step instructions for implementation
+
+My students have completed a coding bootcamp, so they understand basic programming concepts but are new to working with AI tools and integrations. The tone should be educational, friendly, and accessible.
+
+Additional context: {description}
