@@ -1,40 +1,99 @@
-# Learning Resource Generator - Quick Start Guide
+# ClaudeBatch
 
-This guide will help you get started with the Learning Resource Generator, an MCP server that helps you create structured learning materials using Claude batch processing.
+A versatile command-line tool for efficient batch processing with Claude AI, leveraging system prompt caching for cost optimization. Now featuring an MCP (Model Context Protocol) server for creating structured learning resources.
 
-## Prerequisites
+## Features
 
-- Python 3.8+ installed
-- ClaudeBatch repository cloned and dependencies installed
-- Anthropic API key set in your `.env` file
+- Process multiple requests in a single batch
+- Cache system prompts to reduce token costs (90% savings after first use)
+- Use templates with variable substitution
+- Save outputs as properly formatted text files
+- Fallback mechanisms for error handling
+- **NEW**: Learning Resource Generator via MCP integration
 
-## Starting the MCP Server
-
-Run the Learning Resource Generator script to start the MCP server:
+## Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/thesubtleties/claudebatch.git
+cd claudebatch
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+## Setup
+
+1. Create a `.env` file with your API key and settings (or rename the provided `.env.example`):
+
+```
+# Copy .env.example to .env and update with your values
+ANTHROPIC_API_KEY=your_api_key_here
+MODEL=claude-3-7-sonnet-20250219  # Choose your preferred model
+MAX_TOKENS=4000
+TEMPERATURE=0.2
+```
+
+**Note on Models:**
+
+- For better quality, use `claude-3-7-sonnet-20250219`
+- For faster, cheaper responses, use `claude-3-5-haiku-20241022`
+- The `.env.example` includes both options (uncomment as needed)
+
+2. Create a `system_prompt.txt` file with your system prompt
+3. Create a `template.txt` file with your message template (use `{variablename}` for placeholders)
+
+## Basic Usage
+
+```bash
+# Basic usage
+python batch.py --csv your_variables.csv
+
+# With fallback for error handling - may have issues with emojis, and overall text encoding
+python batch.py --csv your_variables.csv --fallback
+
+# Retrieve results from a previous batch
+python get_results.py --batch-id msgbatch_your_batch_id
+```
+
+## CSV Format
+
+Your CSV should include columns matching the variables in your template:
+
+```csv
+title,description
+"Binary Search","Binary Search\n\nStandard implementation\nRotated array search\nSearch in 2D matrix"
+"Dynamic Programming","Dynamic Programming\n\n1D problems\n2D problems\nKnapsack variations"
+```
+
+## Using the Learning Resource Generator (MCP Server)
+
+ClaudeBatch now includes an MCP server that helps you create structured learning resources. This feature leverages the Model Context Protocol to provide an interactive way to generate educational content.
+
+### Starting the MCP Server
+
+To use the Learning Resource Generator:
+
+1. Ensure you have set up your `.env` file with your Anthropic API key
+2. Start the MCP server:
+
+```bash
+# Using stdio transport (recommended for local use)
 python learning_resource_generator.py
 ```
 
-This starts the MCP server using stdio transport, which allows you to connect to it from an MCP client like Claude Desktop.
+3. Connect the MCP server to an MCP client like Claude Desktop
 
-## Connecting from Claude Desktop
+#### Docker Option (Windows with WSL)
 
-### Option 1: Direct Connection (Local Python)
+You can also run the Learning Resource Generator using Docker and WSL on Windows:
 
-1. Open Claude Desktop
-2. Navigate to Settings
-3. Go to the MCP section
-4. Click "Add Server" and select "stdio"
-5. Enter the command: `python /path/to/your/learning_resource_generator.py`
-6. Name your server (e.g., "Learning Resource Generator")
-7. Click "Add"
+1. Build the Docker image:
 
-### Option 2: Docker + WSL Connection (Windows)
+```bash
+docker build -t mcp/learning-generator .
+```
 
-For Windows users who want to run the Learning Resource Generator through Docker and WSL:
-
-1. Ensure Docker and WSL are installed and configured on your Windows machine
 2. Create a `claude_desktop_config.json` file in `C:\Users\YourUser\AppData\Roaming\Claude\` with the following content:
 
 ```json
@@ -59,223 +118,78 @@ For Windows users who want to run the Learning Resource Generator through Docker
 ```
 
 3. Replace `/path/to/your/folder` with the actual path to your project folder containing the `.env` file
-4. Restart Claude Desktop
-5. The Learning Resource Generator should now appear in your MCP servers list
+4. Restart Claude Desktop to load the configuration
 
-## Using the Learning Resource Generator with Claude
+### Workflow
 
-One of the great advantages of using the MCP-based Learning Resource Generator is that Claude naturally understands how to work with it. Once you've connected the MCP server to Claude Desktop:
+The Learning Resource Generator provides a structured workflow:
 
-1. **No need for complex commands** - Simply describe what you want to create in natural language
-2. **Claude understands the available tools** - Claude will recommend the appropriate tools at each step
-3. **Guided workflow** - Claude will walk you through the process from start to finish
+1. Discuss the subject you want to create learning materials for
+2. Create a learning structure with main topics and subtopics using `create_learning_resource_structure`
+3. Generate a system prompt template using `generate_system_prompt_template`
+4. Update the system_prompt.txt file using `update_system_prompt`
+5. Create a template using `generate_template`
+6. Update the template.txt file using `update_template`
+7. Create a variables.csv file using `create_variables_csv`
+8. Run the batch processing using `run_batch_processing`
+9. Check the results using `check_batch_results`
 
-For example, instead of having to remember exact command syntax, you can simply say:
+### Using the Learning Resource Generator with Claude
 
-```
-I'd like to create learning resources about Python for beginners. Can you help me?
-```
+The Learning Resource Generator is designed to work naturally with Claude AI. Once connected:
 
-Claude will then guide you through the process, suggesting appropriate tools and helping you structure your content in a conversational way.
+1. Simply tell Claude what subject you'd like to create learning resources for
+2. Claude will understand how to use the available MCP tools and guide you through the process
+3. You can communicate with Claude in plain text - no need to memorize command structures
 
-## Workflow Walkthrough
+For example, you can just say: "I'd like to create learning resources about Python for beginners" and Claude will help you structure the topics and generate the content using the available MCP tools.
 
-### Step 1: Define Your Subject
+Claude will walk you through each step of the process, from structuring your learning resources to running the batch processing.
 
-Start by discussing the subject you want to create learning materials for with Claude. For example:
+### Example Commands
 
-```
-I'd like to create a learning resource about Python for Data Science.
-```
-
-### Step 2: Create a Learning Structure
-
-Use the `create_learning_resource_structure` tool to define the structure of your learning resource:
-
-```
-create_learning_resource_structure(
-    subject="Python for Data Science",
-    main_topics=[
-        "Getting Started with Python",
-        "Data Manipulation with Pandas",
-        "Data Visualization with Matplotlib",
-        "Statistical Analysis with SciPy"
-    ]
-)
-```
-
-For more complex structures, you can add subtopics:
+Within your MCP client (like Claude Desktop), you can use these tools:
 
 ```
-create_learning_resource_structure(
-    subject="Python for Data Science",
-    main_topics=[
-        "Getting Started with Python",
-        "Data Manipulation with Pandas",
-        "Data Visualization with Matplotlib",
-        "Statistical Analysis with SciPy"
-    ],
-    subtopics={
-        "Getting Started with Python": [
-            "Installing Python and Required Libraries",
-            "Basic Python Syntax for Data Science",
-            "Working with Jupyter Notebooks"
-        ],
-        "Data Manipulation with Pandas": [
-            "Loading Data from Different Sources",
-            "Data Cleaning and Preprocessing",
-            "Advanced Indexing and Selection"
-        ]
-    }
-)
-```
+create_learning_resource_structure(subject="Data Structures and Algorithms", main_topics=["Arrays", "Linked Lists", "Trees", "Graphs"])
 
-### Step 3: Generate a System Prompt Template
+generate_system_prompt_template(subject="Data Structures and Algorithms")
 
-Use the `generate_system_prompt_template` tool to create a system prompt that will guide Claude in generating consistent learning materials:
+update_system_prompt(content="Your generated system prompt here")
 
-```
-generate_system_prompt_template(subject="Python for Data Science")
-```
+generate_template(subject="Data Structures and Algorithms")
 
-### Step 4: Save the System Prompt
+update_template(content="Your generated template here")
 
-Review the generated system prompt and save it to the system_prompt.txt file:
+create_variables_csv(title="Data Structures and Algorithms", topics=["Arrays", "Linked Lists", "Trees", "Graphs"])
 
-```
-update_system_prompt(content="...")
-```
-
-### Step 5: Generate a Request Template
-
-Create a template for your requests to Claude:
-
-```
-generate_template(subject="Python for Data Science")
-```
-
-### Step 6: Save the Template
-
-Save the template to the template.txt file:
-
-```
-update_template(content="...")
-```
-
-### Step 7: Create Variables CSV
-
-Create a variables.csv file with your topics:
-
-```
-create_variables_csv(
-    title="Python for Data Science",
-    topics=[
-        "Getting Started with Python",
-        "Data Manipulation with Pandas",
-        "Data Visualization with Matplotlib",
-        "Statistical Analysis with SciPy"
-    ]
-)
-```
-
-### Step 8: Run Batch Processing
-
-Start the batch processing to generate your learning resources:
-
-```
 run_batch_processing()
-```
 
-This will submit a batch request to Claude API. The output will include a batch ID.
-
-### Step 9: Check Results
-
-Once processing is complete, check the results using the batch ID:
-
-```
 check_batch_results(batch_id="msgbatch_your_batch_id")
 ```
 
-Your generated learning resources will be saved in the `responses` directory, with one file per topic.
+### Output
 
-## Tips for Best Results
+The Learning Resource Generator creates structured, well-formatted learning materials saved in the `responses` directory. Each topic gets its own markdown file with consistent formatting based on your system prompt template.
 
-1. **Be Specific**: The more specific you are about your subject and topics, the better the generated content will be.
+## Cost Benefits
 
-2. **Review Prompts**: Take time to review and refine the system prompt and template before running the batch processing.
+- **Batch Processing**: Up to 50% cheaper than individual requests
+- **System Prompt Caching**: 90% cheaper for cached portions after first use
+- Perfect for generating variations of content with the same system instructions
 
-3. **Start Small**: For your first attempt, start with a small number of topics to see how the process works.
+## Requirements
 
-4. **Customize System Prompts**: Feel free to edit the generated system prompts to tailor the style and format of your learning resources.
+- Python 3.8+
+- anthropic Python package
+- python-dotenv
+- requests
+- mcp (for the Learning Resource Generator)
 
-5. **Add Descriptions**: When creating your variables.csv, you can optionally add descriptions for each topic to guide Claude in generating more targeted content.
+## License
 
-## Troubleshooting
+MIT
 
-- **Connection Issues**: Make sure your MCP server is running before trying to connect from Claude Desktop.
+---
 
-- **Batch Processing Errors**: Check that your API key is valid and you have sufficient quota.
-
-- **Missing Files**: Ensure that system_prompt.txt, template.txt, and variables.csv files exist before running batch processing.
-
-- **Formatting Issues**: If the output isn't formatted correctly, try adjusting your system prompt to provide more specific formatting instructions.
-
-## Example: Creating a Web Development Learning Resource
-
-Here's an example workflow for creating a web development learning resource:
-
-```
-# Step 1: Define the structure
-create_learning_resource_structure(
-    subject="Modern Web Development",
-    main_topics=[
-        "HTML5 Essentials",
-        "CSS3 and Responsive Design",
-        "JavaScript Fundamentals",
-        "Frontend Frameworks"
-    ],
-    subtopics={
-        "HTML5 Essentials": [
-            "Semantic HTML",
-            "Forms and Validation",
-            "Accessibility Best Practices"
-        ],
-        "CSS3 and Responsive Design": [
-            "Flexbox and Grid Layouts",
-            "CSS Variables and Custom Properties",
-            "Media Queries and Breakpoints"
-        ]
-    }
-)
-
-# Step 2: Generate the system prompt
-generate_system_prompt_template(subject="Modern Web Development")
-
-# Step 3: Save the system prompt
-update_system_prompt(content="...")
-
-# Step 4: Generate the template
-generate_template(subject="Modern Web Development")
-
-# Step 5: Save the template
-update_template(content="...")
-
-# Step 6: Create the variables CSV
-create_variables_csv(
-    title="Modern Web Development",
-    topics=[
-        "HTML5 Essentials",
-        "CSS3 and Responsive Design",
-        "JavaScript Fundamentals",
-        "Frontend Frameworks"
-    ]
-)
-
-# Step 7: Run batch processing
-run_batch_processing()
-
-# Step 8: Check results once the batch is complete
-check_batch_results(batch_id="msgbatch_your_batch_id")
-```
-
-Happy learning resource generation!
+**Note**: This tool is not affiliated with Anthropic. Use responsibly and in accordance with Claude's terms of service.
