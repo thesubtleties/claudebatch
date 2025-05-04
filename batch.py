@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 import argparse
-import csv
 import os
 import json
 import anthropic
-from string import Formatter
 from dotenv import load_dotenv
 import sys
 import time
 import requests
+import glob
 
 
 def main():
@@ -19,22 +18,17 @@ def main():
     load_dotenv()
 
     parser = argparse.ArgumentParser(
-        description="Claude API Batch Processing with Caching"
+        description="Claude API Batch Processing with JSX Files"
     )
     parser.add_argument(
-        "--csv",
-        required=True,
-        help="CSV file with variables (header row required)",
+        "--prompts-dir",
+        default="./prompts",
+        help="Directory containing JSX files to process (default: ./prompts)",
     )
     parser.add_argument(
         "--system",
         default=os.path.join(script_dir, "system_prompt.txt"),
         help="Text file containing system prompt to cache (default: system_prompt.txt in script directory)",
-    )
-    parser.add_argument(
-        "--template",
-        default=os.path.join(script_dir, "template.txt"),
-        help="Text file containing message template (default: template.txt in script directory)",
     )
     parser.add_argument(
         "--model",
@@ -69,6 +63,11 @@ def main():
         action="store_true",
         help="Use HTTP fallback if SDK method fails",
     )
+    parser.add_argument(
+        "--file-pattern",
+        default="*.jsx",
+        help="File pattern to match in prompts directory (default: *.jsx)",
+    )
 
     args = parser.parse_args()
 
@@ -83,11 +82,16 @@ def main():
     temperature = args.temperature or float(os.getenv("TEMPERATURE", "0.2"))
     max_tokens = args.max_tokens or int(os.getenv("MAX_TOKENS", "4000"))
     model = args.model or os.getenv("MODEL")
-    # Check if system prompt and template files exist
+
+    # Check if system prompt file exists
     if not os.path.exists(args.system):
         raise FileNotFoundError(f"System prompt file not found: {args.system}")
-    if not os.path.exists(args.template):
-        raise FileNotFoundError(f"Template file not found: {args.template}")
+
+    # Check if prompts directory exists
+    if not os.path.exists(args.prompts_dir):
+        raise FileNotFoundError(
+            f"Prompts directory not found: {args.prompts_dir}"
+        )
 
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
@@ -96,77 +100,56 @@ def main():
     with open(args.system, "r") as f:
         system_prompt = f.read().strip()
 
-    # Read template
-    with open(args.template, "r") as f:
-        template = f.read().strip()
-
-    # Extract variable names from template
-    variables_needed = [
-        fname
-        for _, fname, _, _ in Formatter().parse(template)
-        if fname is not None
-    ]
-    print(f"Template requires these variables: {variables_needed}")
-
     # Initialize Anthropic client
     client = anthropic.Anthropic(api_key=api_key)
 
+    # Find all JSX files in the prompts directory
+    jsx_files = glob.glob(os.path.join(args.prompts_dir, args.file_pattern))
+
+    if not jsx_files:
+        print(
+            f"No {args.file_pattern} files found in {args.prompts_dir}. Exiting."
+        )
+        return
+
+    print(f"Found {len(jsx_files)} JSX files to process.")
+
     # Prepare batch requests
     batch_requests = []
-    id_to_title = {}  # Map custom_id to title for file naming
+    id_to_filename = {}  # Map custom_id to filename for file naming
 
-    # Process each row in the CSV
-    with open(args.csv, "r") as csvfile:
-        reader = csv.DictReader(csvfile)
+    # Process each JSX file
+    for i, jsx_file in enumerate(jsx_files):
+        # Read the JSX file content
+        with open(jsx_file, "r", encoding="utf-8") as f:
+            jsx_content = f.read().strip()
 
-        for i, row in enumerate(reader):
-            # Check if row is empty (all values are empty strings)
-            if all(not value.strip() for value in row.values()):
-                print(f"Empty row detected at row {i+2}. Stopping processing.")
-                break
+        # Get the base filename without extension for output naming
+        base_filename = os.path.splitext(os.path.basename(jsx_file))[0]
 
-            # Check if all required variables are in this row
-            missing = [
-                var
-                for var in variables_needed
-                if var not in row or not row[var].strip()
-            ]
-            if missing:
-                print(
-                    f"Warning: Row {i+2} is missing variables: {missing}. Skipping."
-                )
-                continue
+        # Generate a custom_id for this request
+        custom_id = f"request_{i}"
+        id_to_filename[custom_id] = base_filename
 
-            # Fill template with variables from this row
-            filled_prompt = template.format(**row)
-
-            # Generate a custom_id for this request
-            custom_id = f"request_{i}"
-            id_to_title[custom_id] = row.get(variables_needed[0], f"row_{i}")
-
-            # Create request object properly
-            batch_requests.append(
-                anthropic.types.messages.batch_create_params.Request(
-                    custom_id=custom_id,
-                    params=anthropic.types.message_create_params.MessageCreateParamsNonStreaming(
-                        model=model,
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                        system=[
-                            {
-                                "type": "text",
-                                "text": system_prompt,
-                                "cache_control": {"type": "ephemeral"},
-                            }
-                        ],
-                        messages=[{"role": "user", "content": filled_prompt}],
-                    ),
-                )
+        # Create request object
+        batch_requests.append(
+            anthropic.types.messages.batch_create_params.Request(
+                custom_id=custom_id,
+                params=anthropic.types.message_create_params.MessageCreateParamsNonStreaming(
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    system=[
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
+                    messages=[{"role": "user", "content": jsx_content}],
+                ),
             )
-
-    if not batch_requests:
-        print("No valid requests found in CSV. Exiting.")
-        return
+        )
 
     print(f"Submitting batch of {len(batch_requests)} requests...")
 
@@ -206,10 +189,10 @@ def main():
                 # Access attributes directly as object properties
                 custom_id = result.custom_id
 
-                if custom_id in id_to_title:
-                    title = id_to_title[custom_id]
+                if custom_id in id_to_filename:
+                    filename_base = id_to_filename[custom_id]
                     filename = os.path.join(
-                        args.output_dir, f"{title.replace(' ', '_')}.txt"
+                        args.output_dir, f"{filename_base}.txt"
                     )
 
                     # Check result type (succeeded or error)
@@ -223,14 +206,18 @@ def main():
                         with open(filename, "w", encoding="utf-8") as f:
                             f.write(response_text)
 
-                        print(f"Saved response for '{title}' to {filename}")
+                        print(
+                            f"Saved response for '{filename_base}' to {filename}"
+                        )
                     else:
                         # Handle error case
                         error_obj = result.result.error
                         error_message = getattr(
                             error_obj, "message", "Unknown error"
                         )
-                        print(f"Error processing '{title}': {error_message}")
+                        print(
+                            f"Error processing '{filename_base}': {error_message}"
+                        )
                 else:
                     print(
                         f"Warning: Received result with unknown custom_id: {custom_id}"
@@ -248,7 +235,7 @@ def main():
         # Fall back to HTTP method if SDK method failed and fallback is enabled
         if not success and args.fallback:
             process_results_http(
-                client, batch_status, id_to_title, args.output_dir, api_key
+                client, batch_status, id_to_filename, args.output_dir, api_key
             )
 
     except Exception as e:
@@ -258,7 +245,7 @@ def main():
 
 
 def process_results_http(
-    client, batch_status, id_to_title, output_dir, api_key
+    client, batch_status, id_to_filename, output_dir, api_key
 ):
     """Fallback method using HTTP requests if SDK method fails"""
     if not batch_status.results_url:
@@ -282,11 +269,9 @@ def process_results_http(
         result = json.loads(line)
         custom_id = result.get("custom_id") or result.get("id")
 
-        if custom_id in id_to_title:
-            title = id_to_title[custom_id]
-            filename = os.path.join(
-                output_dir, f"{title.replace(' ', '_')}.txt"
-            )
+        if custom_id in id_to_filename:
+            filename_base = id_to_filename[custom_id]
+            filename = os.path.join(output_dir, f"{filename_base}.txt")
 
             if result["result"]["type"] == "succeeded":
                 # Extract the text content from the response
@@ -300,12 +285,12 @@ def process_results_http(
                 with open(filename, "w", encoding="utf-8") as f:
                     f.write(response_text)
 
-                print(f"Saved response for '{title}' to {filename}")
+                print(f"Saved response for '{filename_base}' to {filename}")
             else:
                 error_message = result.get("result", {}).get(
                     "error", "Unknown error"
                 )
-                print(f"Error processing '{title}': {error_message}")
+                print(f"Error processing '{filename_base}': {error_message}")
         else:
             print(
                 f"Warning: Received result with unknown custom_id: {custom_id}"
